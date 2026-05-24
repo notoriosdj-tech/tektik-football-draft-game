@@ -39,5 +39,6 @@ c=c.replace("const player=chooseCpu(role(r),banned,already,difficulty); if(!play
 c=c.replace("const player=chooseCpu(role(r),banned,blocked,'HARD'); if(player){h[r]=player; blocked.push(player.id)}}","const player=chooseCpu(role(r),banned,blocked,'HARD',h,c,'Tactical Purist'); if(player){h[r]=player; blocked.push(player.id)}}");
 c=c.replace("const player=chooseCpu(role(r),banned,blocked,difficulty); if(player){c[r]=player; blocked.push(player.id)}} setHuman(h); setCpu(c); finish(h,c)}","const player=chooseCpu(role(r),banned,blocked,difficulty,c,h,cpuStyle); if(player){c[r]=player; blocked.push(player.id)}} setHuman(h); setCpu(c); finish(h,c)}");
 c=c.replace('<p>CPU locked this player into its XI. Continue when ready.</p>',"<p>{data.explanation || 'CPU locked this player into its XI. Continue when ready.'}</p>");
+try{require('./patch-series-flow.cjs')}catch(e){console.log('Series patch skipped:',e.message)}
 fs.writeFileSync('src/App.jsx',c);
 console.log('Smart CPU patch applied');
