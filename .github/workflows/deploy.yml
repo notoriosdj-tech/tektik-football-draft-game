@@ -45,6 +45,8 @@ jobs:
           NODE
       - name: Apply smarter CPU draft patch
         run: node scripts/patch-smart-cpu.cjs
+      - name: Apply duplicate player identity patch
+        run: node scripts/patch-no-duplicate-names.cjs
       - name: Build production app
         run: npx vite build
       - name: Setup Pages
