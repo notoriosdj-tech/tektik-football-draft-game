@@ -1,7 +1,8 @@
 const DEFAULT_TIMEOUT_MS=9000;
 
 function endpoint(name){
-  const specific=import.meta.env[`VITE_AI_${name.toUpperCase()}_URL`];
+  const key=name.replace(/-/g,'_').toUpperCase();
+  const specific=import.meta.env[`VITE_AI_${key}_URL`];
   if(specific)return specific;
   const base=import.meta.env.VITE_AI_BASE_URL;
   if(base)return `${base.replace(/\/$/,'')}/api/${name}`;
