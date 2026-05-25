@@ -9,6 +9,11 @@ s=s.replace(/flag:'🏴'/g,"flag:'ENG'");
 s=s.replace("<em>{p?.photo||''}</em>","<em>{p?.flag||''}</em>");
 s=s.replace("<em>{data.player.photo}</em>","<em>{data.player.flag}</em>");
 
+// remove duplicate secondary flags on cards and summon cards
+s=s.replace("<i>{p?.flag}</i>","");
+s=s.replace("{p&&<small>{p.flag} {p.country}</small>}","{p&&<small>{p.country}</small>}");
+s=s.replace("<i>{data.player.flag}</i>","");
+
 // compatibility helper for wingbacks and related roles
 s=s.replace("function cpuPick(pos,blocked,diff){const noise={EASY:12,MEDIUM:5,HARD:1}[diff]??5;return PLAYERS.filter(p=>!blocked.has(p.id)&&p.pos.includes(pos)).map(p=>({p,s:p.rating+Math.random()*noise})).sort((a,b)=>b.s-a.s)[0]?.p}",
 "function fits(p,pos){const a=p.pos||[];if(a.includes(pos))return true;if(pos==='RWB')return a.includes('RB')||a.includes('RM')||a.includes('RW');if(pos==='LWB')return a.includes('LB')||a.includes('LM')||a.includes('LW');if(pos==='RM')return a.includes('RW')||a.includes('RWB');if(pos==='LM')return a.includes('LW')||a.includes('LWB');if(pos==='CF')return a.includes('ST')||a.includes('CAM');return false}function cpuPick(pos,blocked,diff){const noise={EASY:12,MEDIUM:5,HARD:1}[diff]??5;return PLAYERS.filter(p=>!blocked.has(p.id)&&fits(p,pos)).map(p=>({p,s:p.rating+(p.pos.includes(pos)?8:0)+Math.random()*noise})).sort((a,b)=>b.s-a.s)[0]?.p}");
@@ -27,8 +32,13 @@ s=s.replace("<Top view={view} setView={setView} series={series} team={team} hc={
 s=s.replace("[summon,setSummon]=useState(null),[shine,setShine]=useState(null),[drawer,setDrawer]=useState(false),[auto,setAuto]=useState(false);",
 "[summon,setSummon]=useState(null),[shine,setShine]=useState(null),[turn,setTurn]=useState(null),[drawer,setDrawer]=useState(false),[auto,setAuto]=useState(false);");
 s=s.replace("function pickPlayer(p){const h={...human,[pickSlot.id]:p};let c={...cpu};const blocked=new Set([...banned,...ids(h),...ids(c)]);flash(pickSlot.id,'you',p,pickSlot.pos,900);const cs=order.find(s=>!c[s.id]);if(cs){const cp=cpuPick(cs.pos,blocked,difficulty);if(cp){c[cs.id]=cp;setTimeout(()=>{setView('CPU');flash(cs.id,'cpu',cp,cs.pos,2200)},600);setTimeout(()=>setView('YOU'),3000)}}setHuman(h);setCpu(c);setPickSlot(null);if(Object.keys(h).length>=order.length)setTimeout(()=>finish(h,c),3300)}",
-"function pickPlayer(p){const h={...human,[pickSlot.id]:p};let c={...cpu};const blocked=new Set([...banned,...ids(h),...ids(c)]);flash(pickSlot.id,'you',p,pickSlot.pos,1100);const cs=order.find(s=>!c[s.id]);if(cs){const cp=cpuPick(cs.pos,blocked,difficulty);if(cp){c[cs.id]=cp;setTimeout(()=>{setTurn('CPU TURN')},1000);setTimeout(()=>{setTurn(null);setView('CPU');flash(cs.id,'cpu',cp,cs.pos,2600)},1800);setTimeout(()=>setView('YOU'),4700)}}setHuman(h);setCpu(c);setPickSlot(null);if(Object.keys(h).length>=order.length)setTimeout(()=>finish(h,c),5000)}");
+"function pickPlayer(p){const h={...human,[pickSlot.id]:p};let c={...cpu};const blocked=new Set([...banned,...ids(h),...ids(c)]);flash(pickSlot.id,'you',p,pickSlot.pos,1300);const cs=order.find(s=>!c[s.id]);if(cs){const cp=cpuPick(cs.pos,blocked,difficulty);if(cp){c[cs.id]=cp;setTimeout(()=>{setTurn('CPU TURN')},1400);setTimeout(()=>{setTurn(null);setView('CPU');flash(cs.id,'cpu',cp,cs.pos,3400)},2400);setTimeout(()=>setView('YOU'),6900)}}setHuman(h);setCpu(c);setPickSlot(null);if(Object.keys(h).length>=order.length)setTimeout(()=>finish(h,c),7200)}");
 s=s.replace("<Summon data={summon}/></main>","{turn&&<div className=\"turnBanner\"><b>{turn}</b></div>}<Summon data={summon}/></main>");
 
 fs.writeFileSync(file,s);
-console.log('Field controls and turn animation patch applied');
+
+const cssFile='src/stableGame.css';
+let css=fs.readFileSync(cssFile,'utf8');
+css += `\n/* duplicate flag cleanup + longer CPU-read shine */\n.card i,.summonCard i{display:none!important}.card small{display:none!important}.card em{width:36px!important;height:36px!important;top:23px!important;border-radius:50%!important;font-size:20px!important;background:#0b1526!important;border:2px solid rgba(255,255,255,.45)!important}.summonCard em{font-size:36px!important}.card.shine{animation:shine 3.4s ease!important}\n`;
+fs.writeFileSync(cssFile,css);
+console.log('CPU pitch hold and duplicate flag cleanup applied');
