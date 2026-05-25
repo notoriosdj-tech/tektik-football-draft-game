@@ -26,6 +26,8 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Apply stable game fixes
+        run: node scripts/apply-stable-fixes.cjs
       - name: Build production app
         run: npx vite build
       - name: Setup Pages
