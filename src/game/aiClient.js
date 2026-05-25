@@ -1,5 +1,6 @@
 const DEFAULT_TIMEOUT_MS=9000;
 const OPENAI_CHAT_URL='https://api.openai.com/v1/chat/completions';
+const KEY_STORAGE='tektik_openai_api_key';
 
 function endpoint(name){
   const key=name.replace(/-/g,'_').toUpperCase();
@@ -10,23 +11,25 @@ function endpoint(name){
   return `/api/${name}`;
 }
 
-function getBrowserKey(){
+export function getStoredOpenAIKey(){
   const envKey=import.meta.env.VITE_OPENAI_API_KEY;
   if(envKey)return envKey;
-  try{
-    let key=localStorage.getItem('tektik_openai_api_key')||'';
-    if(key)return key;
-    key=window.prompt('Enter your OpenAI API key to enable AI CPU and AI Referee. It will be stored only in this browser. Leave empty to use local fallback.')||'';
-    key=key.trim();
-    if(key)localStorage.setItem('tektik_openai_api_key',key);
-    return key;
-  }catch{
-    return '';
-  }
+  try{return localStorage.getItem(KEY_STORAGE)||''}catch{return ''}
 }
 
+export function saveOpenAIKey(key){
+  try{
+    const clean=String(key||'').trim();
+    if(clean)localStorage.setItem(KEY_STORAGE,clean);
+    else localStorage.removeItem(KEY_STORAGE);
+    return clean;
+  }catch{return ''}
+}
+
+export function hasOpenAIKey(){return !!getStoredOpenAIKey()}
+
 function clearBadKey(){
-  try{localStorage.removeItem('tektik_openai_api_key')}catch{}
+  try{localStorage.removeItem(KEY_STORAGE)}catch{}
 }
 
 async function postJson(url,payload,timeoutMs=DEFAULT_TIMEOUT_MS){
@@ -42,8 +45,8 @@ async function postJson(url,payload,timeoutMs=DEFAULT_TIMEOUT_MS){
 }
 
 async function directOpenAI({system,user,temperature=.35,timeoutMs=DEFAULT_TIMEOUT_MS}){
-  const key=getBrowserKey();
-  if(!key)throw new Error('No browser OpenAI key');
+  const key=getStoredOpenAIKey();
+  if(!key)throw new Error('No OpenAI key saved');
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
@@ -86,18 +89,22 @@ function validCpuPick(result,available){
   return available.find(p=>p.id===id||p.canonicalId===id)||null;
 }
 
-function cpuSystemPrompt(){return `You are the AI CPU manager for TEK-Tik Football Draft. Choose exactly one legal player from availablePlayers. Think like a sophisticated football draft opponent. Prioritize formation fit, position fit, scarcity, tactical balance, role coverage, opponent denial, and long-term series strategy. Return only valid JSON with pickId, reason, and strategy. Do not invent players.`}
+function cpuSystemPrompt(){return `You are the AI CPU manager for TEK-Tik Football Draft. Choose exactly one legal player from availablePlayers. Think like a sophisticated football draft opponent. Prioritize formation fit, position fit, scarcity, tactical balance, role coverage, opponent denial, current score in the series, and long-term series strategy. You must choose from availablePlayers only. Return only valid JSON with pickId, reason, and strategy. Do not invent players.`}
 
 export async function requestAiCpuPick({slot,availablePlayers,cpuTeam,userTeam,formation,difficulty,series,banned}){
   if(!availablePlayers?.length)return null;
-  const topAvailable=availablePlayers.slice(0,40).map(simplePlayer);
+  const topAvailable=availablePlayers.slice(0,45).map(simplePlayer);
   const payload={slot,formation,difficulty,series,banned,availablePlayers:topAvailable,cpuTeam:serializeTeam(cpuTeam),userTeam:serializeTeam(userTeam)};
-  try{
-    const direct=await directOpenAI({system:cpuSystemPrompt(),user:JSON.stringify({task:'Choose the best CPU pick. Return {"pickId":"...","reason":"...","strategy":"..."}.',context:payload},null,2),temperature:.25,timeoutMs:9000});
-    const pick=validCpuPick(direct,availablePlayers);
-    if(pick)return pick;
-  }catch(err){
-    console.warn('Direct AI CPU failed, trying backend/local fallback:',err?.message||err);
+  if(hasOpenAIKey()){
+    try{
+      const direct=await directOpenAI({system:cpuSystemPrompt(),user:JSON.stringify({task:'Choose the best CPU pick. Return {"pickId":"...","reason":"...","strategy":"..."}.',context:payload},null,2),temperature:.18,timeoutMs:12000});
+      const pick=validCpuPick(direct,availablePlayers);
+      if(pick)return pick;
+      throw new Error('AI returned invalid CPU pick');
+    }catch(err){
+      console.warn('Direct AI CPU failed; emergency fallback may be used:',err?.message||err);
+      return null;
+    }
   }
   try{
     const data=await postJson(endpoint('cpu-pick'),payload,8000);
@@ -134,16 +141,20 @@ function validateAiReferee(data,localFallback){
   return {...localFallback,winner,score:{you,cpu},minutes,explanation,aiPowered:true,headline:data.headline||'',fairnessNote:data.fairnessNote||''};
 }
 
-function refereeSystemPrompt(){return `You are the AI referee for TEK-Tik Football Draft. Judge the match fairly using football logic, not fame alone. Evaluate position fit, formation balance, midfield control, defensive structure, chance creation, finishing, goalkeeper impact, tactical matchups, and out-of-position risks. Return only valid JSON. Do not mention players who are not in userTeam or cpuTeam. The match must have one winner: YOU or CPU. The score must match the winner. Provide realistic match minutes with tactical causes.`}
+function refereeSystemPrompt(){return `You are the AI referee for TEK-Tik Football Draft. Judge the match fairly using football logic, not fame alone. Evaluate position fit, formation balance, midfield control, defensive structure, chance creation, finishing, goalkeeper impact, tactical matchups, and out-of-position risks. You are the primary authority for the result. Return only valid JSON. Do not mention players who are not in userTeam or cpuTeam. The match must have one winner: YOU or CPU. The score must match the winner. Provide realistic match minutes with tactical causes.`}
 
 export async function requestAiReferee({localResult,teamName,formation,difficulty,series,userTeam,cpuTeam,bannedPlayers}){
   const payload={teamName,formation,difficulty,series,bannedPlayers,userTeam:serializeTeam(userTeam),cpuTeam:serializeTeam(cpuTeam),localResult:{winner:localResult.winner,score:localResult.score,explanation:localResult.explanation,minutes:localResult.minutes}};
-  try{
-    const direct=await directOpenAI({system:refereeSystemPrompt(),user:JSON.stringify({task:'Decide this TEK-Tik match. Return JSON with winner, score, headline, explanation, minutes, fairnessNote.',match:payload},null,2),temperature:.45,timeoutMs:13000});
-    const valid=validateAiReferee(direct,localResult);
-    if(valid)return valid;
-  }catch(err){
-    console.warn('Direct AI referee failed, trying backend/local fallback:',err?.message||err);
+  if(hasOpenAIKey()){
+    try{
+      const direct=await directOpenAI({system:refereeSystemPrompt(),user:JSON.stringify({task:'Decide this TEK-Tik match. Return JSON with winner, score, headline, explanation, minutes, fairnessNote.',match:payload},null,2),temperature:.38,timeoutMs:16000});
+      const valid=validateAiReferee(direct,localResult);
+      if(valid)return valid;
+      throw new Error('AI returned invalid referee result');
+    }catch(err){
+      console.warn('Direct AI referee failed; emergency fallback may be used:',err?.message||err);
+      return localResult;
+    }
   }
   try{
     const data=await postJson(endpoint('referee'),payload,12000);
