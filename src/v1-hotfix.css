@@ -31,3 +31,36 @@
 .pickerBottom{
   touch-action:none!important;
 }
+
+/* V1.1-safe referee/result screen fix
+   Only the green result content scrolls. The app, console and bottom action button remain fixed. */
+.resultConsole{
+  overflow:hidden!important;
+}
+
+.resultScreen{
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  padding-bottom:18px!important;
+}
+
+.resultScreen p,
+.resultScreen .mins,
+.resultScreen .scorebig{
+  min-height:0!important;
+}
+
+.mins{
+  overflow:visible!important;
+}
+
+@media(max-height:700px){
+  .resultScreen{
+    overflow-y:auto!important;
+    touch-action:pan-y!important;
+  }
+}
