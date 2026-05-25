@@ -1,1 +1,33 @@
 .reviewNote{display:none!important}
+
+/* V1.1-safe picker discovery fix
+   Keep the game locked, but allow the player results list itself to scroll. */
+.reslist{
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  -webkit-overflow-scrolling:touch!important;
+  overscroll-behavior:contain!important;
+  touch-action:pan-y!important;
+  display:block!important;
+  height:176px!important;
+  max-height:176px!important;
+  padding-right:2px!important;
+}
+
+.res{
+  display:grid!important;
+  margin-bottom:5px!important;
+}
+
+.res:nth-child(n+5){
+  display:grid!important;
+}
+
+.panel{
+  touch-action:auto!important;
+}
+
+.shade,
+.pickerBottom{
+  touch-action:none!important;
+}
