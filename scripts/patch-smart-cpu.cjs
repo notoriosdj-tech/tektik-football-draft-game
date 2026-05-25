@@ -28,6 +28,11 @@ s=s.replace("function Pitch({formation,teamObj,view,onSlot,selected,shine}){retu
 s=s.replace("<Top view={view} setView={setView} series={series} team={team} hc={Object.keys(human).length} cc={Object.keys(cpu).length} total={order.length} open={()=>setDrawer(true)}/><Pitch formation={formation} teamObj={view==='YOU'?human:cpu} view={view} selected={selected} shine={shine} onSlot={handleSlot}/>",
 "<Top team={team}/><Pitch formation={formation} teamObj={view==='YOU'?human:cpu} view={view} selected={selected} shine={shine} setView={setView} open={()=>setDrawer(true)} onSlot={handleSlot}/>");
 
+// player picker: bottom by default, lifts when search input is focused
+s=s.replace("function Picker({slot,used,banned,onPick,onClose}){const[q,setQ]=useState('');", "function Picker({slot,used,banned,onPick,onClose}){const[q,setQ]=useState(''),[typing,setTyping]=useState(false);");
+s=s.replace("return <div className=\"shade\"><div className=\"panel\">", "return <div className={typing?'shade pickerTyping':'shade pickerBottom'}><div className=\"panel\">");
+s=s.replace("<input value={q} onChange={e=>setQ(e.target.value)} placeholder={`Search ${slot.pos} players...`} inputMode=\"search\"/>", "<input value={q} onFocus={()=>setTyping(true)} onBlur={()=>setTyping(false)} onChange={e=>setQ(e.target.value)} placeholder={`Search ${slot.pos} players...`} inputMode=\"search\"/>");
+
 // turn change overlay/state
 s=s.replace("[summon,setSummon]=useState(null),[shine,setShine]=useState(null),[drawer,setDrawer]=useState(false),[auto,setAuto]=useState(false);",
 "[summon,setSummon]=useState(null),[shine,setShine]=useState(null),[turn,setTurn]=useState(null),[drawer,setDrawer]=useState(false),[auto,setAuto]=useState(false);");
@@ -39,6 +44,7 @@ fs.writeFileSync(file,s);
 
 const cssFile='src/stableGame.css';
 let css=fs.readFileSync(cssFile,'utf8');
+css += `\n/* picker thumb-zone behavior */\n.shade.pickerBottom{padding:0 10px 10px!important;align-items:flex-end!important}.shade.pickerBottom .panel{height:min(43dvh,360px)!important;margin-bottom:0!important;border-radius:22px 22px 18px 18px!important}.shade.pickerTyping{padding:56px 10px 0!important;align-items:flex-start!important}.shade.pickerTyping .panel{height:min(42dvh,350px)!important}.shade.pickerBottom .panel{animation:drawerUp .16s ease-out}.shade.pickerTyping .panel{animation:drawerLift .16s ease-out}@keyframes drawerUp{from{transform:translateY(16px);opacity:.85}to{transform:translateY(0);opacity:1}}@keyframes drawerLift{from{transform:translateY(12px);opacity:.85}to{transform:translateY(0);opacity:1}}\n`;
 css += `\n/* duplicate flag cleanup + longer CPU-read shine */\n.card i,.summonCard i{display:none!important}.card small{display:none!important}.card em{width:36px!important;height:36px!important;top:23px!important;border-radius:50%!important;font-size:20px!important;background:#0b1526!important;border:2px solid rgba(255,255,255,.45)!important}.summonCard em{font-size:36px!important}.card.shine{animation:shine 3.4s ease!important}\n`;
 fs.writeFileSync(cssFile,css);
-console.log('CPU pitch hold and duplicate flag cleanup applied');
+console.log('Picker thumb-zone behavior applied');
